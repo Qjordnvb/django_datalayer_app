@@ -1,0 +1,24 @@
+# Django y componentes relacionados
+Django==4.2.7
+channels==4.0.0
+daphne==4.0.0
+django-crispy-forms==2.0
+crispy-bootstrap5==0.7
+whitenoise==6.6.0
+gunicorn==21.2.0
+redis==5.0.1
+psycopg2-binary==2.9.9
+
+# Dependencias existentes
+playwright==1.40.0
+jinja2==3.1.2
+pyyaml==6.0
+python-dotenv==1.0.0
+jsonschema==4.19.1
+pandas==2.1.1
+tqdm==4.66.1
+colorama==0.4.6
+matplotlib==3.8.2
+
+# Nuevas dependencias para procesamiento
+pillow==10.0.1
