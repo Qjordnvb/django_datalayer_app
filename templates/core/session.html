@@ -1,0 +1,602 @@
+
+{% extends "base.html" %}
+
+{% block title %}Sesión de validación - DataLayer Validator{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos específicos para la página de sesión */
+    body {
+        overflow-x: hidden; /* Evita scroll horizontal innecesario */
+    }
+    .browser-viewport {
+        position: relative; /* Para posicionar el indicador de carga */
+        background-color: #f8f9fa; /* Un fondo mientras carga */
+        min-height: 400px; /* Altura mínima para que no colapse */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden; /* Oculta partes de la imagen si es muy grande */
+    }
+    .browser-screenshot {
+        display: block; /* Evita espacio extra debajo de la imagen */
+        max-width: 100%; /* Asegura que la imagen no se desborde */
+        height: auto; /* Mantiene la proporción */
+        cursor: crosshair; /* Indica que se puede hacer clic */
+    }
+    .browser-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        display: none; /* Oculto por defecto */
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 20px;
+        border-radius: 50%;
+    }
+    .browser-header {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        background-color: #e9ecef;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .browser-controls {
+        display: flex;
+        gap: 5px;
+    }
+    .browser-controls button {
+        line-height: 1; /* Ajusta altura */
+    }
+    .browser-address-bar {
+        flex-grow: 1;
+        margin: 0 10px;
+        padding: 5px 10px;
+        background-color: #fff;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 14px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .datalayer-panel {
+        max-height: 600px; /* Altura máxima antes de scroll */
+        overflow-y: auto;
+        padding: 15px;
+    }
+    .datalayer-event {
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 15px;
+        background-color: #fff;
+        transition: background-color 0.3s ease;
+    }
+    .datalayer-event.valid { border-left: 5px solid #4caf50; }
+    .datalayer-event.invalid { border-left: 5px solid #f44336; }
+    .datalayer-event.warning { border-left: 5px solid #ff9800; }
+    .datalayer-event:hover { background-color: #f9f9f9; }
+    .datalayer-event pre {
+        max-height: 200px;
+        overflow: auto;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        padding: 8px;
+        font-size: 0.85em;
+        margin-top: 5px;
+    }
+    .validation-errors { padding-left: 20px; margin-top: 5px; }
+    .validation-errors li { font-size: 0.9em; color: #dc3545; }
+
+    /* Ajustes modal pantalla completa */
+    #fullscreen-modal .modal-body {
+        display: flex;
+        flex-direction: column;
+    }
+    #fullscreen-modal .browser-viewport {
+        flex-grow: 1; /* Ocupa el espacio restante */
+        min-height: 0; /* Resetea min-height para el modal */
+    }
+     #fullscreen-modal .browser-screenshot {
+        object-fit: contain; /* Asegura que toda la imagen sea visible */
+        width: 100%;
+        height: 100%;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">
+                <i class="fas fa-desktop me-2"></i>Sesión: <span class="text-break">{{ session.url|truncatechars:50 }}</span>
+            </h2>
+            <div>
+                <span class="badge bg-primary me-2 user-select-all">ID: {{ session.id }}</span>
+                <span id="session-status-badge" class="badge {% if session.status == 'active' %}bg-success{% elif session.status == 'completed' %}bg-primary{% elif session.status == 'error' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ session.get_status_display }}
+                </span>
+            </div>
+        </div>
+        <p class="text-muted mb-0">
+            <i class="far fa-clock me-1"></i>Iniciada: {{ session.created_at|date:"d/m/Y H:i" }}
+            {% if session.description %}
+                <span class="ms-3"><i class="far fa-comment-dots me-1"></i>{{ session.description }}</span>
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-globe me-2"></i>Navegador</h5>
+                <div>
+                    <button id="fullscreen-btn" class="btn btn-sm btn-light" title="Pantalla completa">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="browser-container">
+                    <div class="browser-header">
+                        <div class="browser-controls">
+                            <button id="back-btn" class="btn btn-sm btn-outline-secondary" title="Atrás">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <button id="forward-btn" class="btn btn-sm btn-outline-secondary" title="Adelante">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <button id="reload-btn" class="btn btn-sm btn-outline-secondary" title="Recargar">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="browser-address-bar" id="current-url">{{ session.url }}</div>
+                        <div class="browser-controls">
+                            <button id="capture-btn" class="btn btn-sm btn-outline-primary" title="Capturar DataLayer Ahora">
+                                <i class="fas fa-camera"></i> <span class="d-none d-sm-inline">Capturar DL</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="browser-viewport">
+                        <div class="browser-loading" id="loading-indicator">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                        <img id="browser-screenshot" class="browser-screenshot" src="{% url 'placeholder_image' %}" alt="Captura del navegador">
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <span class="badge bg-info" id="screenshot-counter">
+                            <i class="fas fa-image me-1"></i><span id="screenshot-count">0</span> capturas
+                        </span>
+                        <span class="badge bg-success ms-2" id="datalayer-counter">
+                            <i class="fas fa-code me-1"></i><span id="datalayer-count">0</span> DataLayers
+                        </span>
+                    </div>
+                    <div>
+                        <button id="stop-btn" class="btn btn-danger btn-sm"> {# Botón que abre el modal #}
+                            <i class="fas fa-stop-circle me-1"></i>Finalizar sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Acciones</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label for="goto-url" class="form-label">Navegar a URL:</label>
+                        <div class="input-group">
+                            <input type="text" id="goto-url" class="form-control" placeholder="https://ejemplo.com/pagina">
+                            <button id="goto-btn" class="btn btn-primary">
+                                <i class="fas fa-arrow-right me-1"></i>Ir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                     <div class="col-md-12">
+                         <div class="d-flex flex-wrap gap-2">
+                            <button id="capture-datalayer-btn" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-code me-1"></i>Capturar DataLayer
+                            </button>
+                            <button id="check-validation-btn" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-check-circle me-1"></i>Verificar Validación
+                            </button>
+                            <button id="take-screenshot-btn" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-camera me-1"></i>Tomar Captura
+                            </button>
+                             <button id="generate-report-btn" class="btn btn-success btn-sm"> {# Botón que abre el modal de reporte #}
+                                <i class="fas fa-file-alt me-1"></i>Generar reporte
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list-alt me-2"></i>DataLayers Capturados</h5>
+                <span class="badge bg-light text-dark" id="datalayer-badge">0</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="datalayer-panel" id="datalayer-container">
+                    <div class="p-4 text-center text-muted">
+                        <i class="fas fa-code fa-3x mb-3"></i>
+                        <p>No hay DataLayers capturados todavía.</p>
+                        <p>Navega por el sitio o haz clic en "Capturar DataLayer" para empezar.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Estado de Validación</h5>
+            </div>
+            <div class="card-body">
+                <div id="validation-stats">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="p-3 border rounded bg-light">
+                                <h3 id="total-datalayers" class="mb-1">0</h3>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 border rounded bg-success bg-opacity-10">
+                                <h3 id="valid-datalayers" class="mb-1 text-success">0</h3>
+                                <small class="text-muted">Válidos</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 border rounded bg-danger bg-opacity-10">
+                                <h3 id="invalid-datalayers" class="mb-1 text-danger">0</h3>
+                                <small class="text-muted">Inválidos</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="progress mt-4" style="height: 20px;">
+                        <div id="valid-progress" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                        <div id="invalid-progress" class="progress-bar bg-danger progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+
+                    <div class="alert alert-light mt-4 border">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="validation-message">La validación comenzará cuando se capturen DataLayers.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="datalayer-event-template">
+    <div class="datalayer-event" tabindex="0"> {# Añadido tabindex para foco #}
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+                <h6 class="event-name mb-1"></h6>
+                <small class="text-muted event-time"></small>
+            </div>
+            <span class="badge validation-badge"></span>
+        </div>
+        <div class="json-viewer">
+            <pre><code class="language-json event-data"></code></pre> {# Usar <code> para posible resaltado #}
+        </div>
+        <div class="validation-info mt-2" style="display: none;"> {# Oculto por defecto #}
+            <ul class="validation-errors list-unstyled mb-0"></ul>
+        </div>
+    </div>
+</template>
+
+<div class="modal fade" id="fullscreen-modal" tabindex="-1" aria-labelledby="fullscreenModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fullscreenModalLabel">
+                    <i class="fas fa-globe me-2"></i><span id="modal-current-url">{{ session.url }}</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 d-flex flex-column">
+                <div class="browser-container d-flex flex-column flex-grow-1">
+                    <div class="browser-header">
+                         <div class="browser-controls">
+                            <button id="modal-back-btn" class="btn btn-sm btn-outline-secondary" title="Atrás">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <button id="modal-forward-btn" class="btn btn-sm btn-outline-secondary" title="Adelante">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <button id="modal-reload-btn" class="btn btn-sm btn-outline-secondary" title="Recargar">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="browser-address-bar flex-grow-1 mx-2"></div>
+                         <div class="browser-controls">
+                            <button id="modal-capture-btn" class="btn btn-sm btn-outline-primary" title="Capturar DataLayer">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="browser-viewport flex-grow-1 position-relative">
+                        <div class="browser-loading" id="modal-loading-indicator">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                        <img id="modal-browser-screenshot" class="browser-screenshot" src="{% url 'placeholder_image' %}" alt="Captura del navegador">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="stop-session-modal" tabindex="-1" aria-labelledby="stopSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="stopSessionModalLabel">
+                    <i class="fas fa-stop-circle me-2 text-danger"></i>Finalizar sesión
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas finalizar esta sesión de validación?</p>
+                <p>Todos los datos capturados se conservarán y podrás generar un reporte, pero no podrás seguir navegando en el sitio.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirm-stop-btn"> {# Botón DENTRO del modal #}
+                    <i class="fas fa-stop-circle me-1"></i>Confirmar Finalización
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="generate-report-modal" tabindex="-1" aria-labelledby="generateReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="generateReportModalLabel">
+                    <i class="fas fa-file-alt me-2 text-success"></i>Generar reporte
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Se generará un reporte con todos los DataLayers capturados y su estado de validación.</p>
+                <form id="report-form">
+                    <div class="mb-3">
+                        <label for="report-title" class="form-label">Título del reporte</label>
+                        <input type="text" class="form-control" id="report-title" value="Validación de {{ session.url|truncatechars:30 }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="report-format" class="form-label">Formato</label>
+                        <select class="form-select" id="report-format">
+                            <option value="html" selected>HTML</option>
+                            <option value="pdf">PDF</option>
+                            <option value="json">JSON</option>
+                            <option value="csv">CSV</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input class="form-check-input" type="checkbox" id="include-screenshots" checked>
+                        <label class="form-check-label" for="include-screenshots">Incluir capturas de pantalla</label>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input class="form-check-input" type="checkbox" id="include-raw-data" checked>
+                        <label class="form-check-label" for="include-raw-data">Incluir datos JSON completos</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="confirm-generate-report-btn"> {# Botón DENTRO del modal #}
+                    <i class="fas fa-file-alt me-1"></i>Generar reporte
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{# --- Inicio del Bloque JavaScript Modificado --- #}
+{% block extra_js %}
+{% load static %} {# Carga la etiqueta static #}
+<script src="{% static 'js/session_websocket.js' %}"></script> {# Carga el script WebSocket #}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Obtener el ID de la sesión directamente desde la variable de plantilla de Django
+        const sessionId = "{{ session.id|escapejs }}"; // Usamos escapejs por seguridad
+
+        if (!sessionId) {
+            console.error('CRITICAL: No se encontró el ID de la sesión en la plantilla.');
+            // Mostrar un error visual al usuario, ya que sin ID nada funcionará
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger';
+            errorDiv.textContent = 'Error crítico: No se pudo obtener el ID de la sesión. La funcionalidad está desactivada.';
+            document.querySelector('.container').prepend(errorDiv);
+            return;
+        }
+
+        // Crear e iniciar la instancia de WebSocket
+        // Asegúrate que la clase SessionWebSocket esté definida en session_websocket.js
+        if (typeof SessionWebSocket === 'undefined') {
+             console.error('CRITICAL: La clase SessionWebSocket no está definida. Asegúrate que session_websocket.js se cargó correctamente.');
+             return;
+        }
+        const ws = new SessionWebSocket(sessionId);
+        ws.connect(); // Inicia la conexión
+
+        console.log("Intentando inicializar SessionWebSocket con ID:", sessionId);
+
+        // --- Configuración de eventos para botones ---
+        // Mantenemos los listeners aquí para asegurar que 'ws' esté definido
+
+        // Referencias a elementos del DOM
+        const backBtn = document.getElementById('back-btn');
+        const forwardBtn = document.getElementById('forward-btn');
+        const reloadBtn = document.getElementById('reload-btn');
+        const captureBtn = document.getElementById('capture-btn'); // Botón cámara en la barra de navegador
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const stopBtnTrigger = document.getElementById('stop-btn'); // Botón que ABRE el modal
+        const gotoUrlInput = document.getElementById('goto-url');
+        const gotoBtn = document.getElementById('goto-btn');
+        const generateReportBtnTrigger = document.getElementById('generate-report-btn'); // Botón que ABRE el modal
+        const captureDatalayerBtn = document.getElementById('capture-datalayer-btn'); // Botón de acción
+        const checkValidationBtn = document.getElementById('check-validation-btn');
+        const takeScreenshotBtn = document.getElementById('take-screenshot-btn');
+        const confirmStopBtn = document.getElementById('confirm-stop-btn'); // Botón DENTRO del modal stop
+        const confirmGenerateReportBtn = document.getElementById('confirm-generate-report-btn'); // Botón DENTRO del modal report
+
+        // Botones del modal de pantalla completa
+        const modalBackBtn = document.getElementById('modal-back-btn');
+        const modalForwardBtn = document.getElementById('modal-forward-btn');
+        const modalReloadBtn = document.getElementById('modal-reload-btn');
+        const modalCaptureBtn = document.getElementById('modal-capture-btn');
+
+        // Imágenes
+        const screenshotImg = document.getElementById('browser-screenshot');
+        const modalScreenshotImg = document.getElementById('modal-browser-screenshot');
+
+        // Inicializar modales de Bootstrap (si existen)
+        const fullscreenModalElem = document.getElementById('fullscreen-modal');
+        const stopSessionModalElem = document.getElementById('stop-session-modal');
+        const generateReportModalElem = document.getElementById('generate-report-modal');
+
+        // Solo crea instancias si los elementos existen
+        const fullscreenModal = fullscreenModalElem ? new bootstrap.Modal(fullscreenModalElem) : null;
+        const stopSessionModal = stopSessionModalElem ? new bootstrap.Modal(stopSessionModalElem) : null;
+        const generateReportModal = generateReportModalElem ? new bootstrap.Modal(generateReportModalElem) : null;
+
+        // --- Asignación de Event Listeners (verificando existencia de elementos) ---
+
+        if (backBtn) backBtn.addEventListener('click', () => ws.goBack()); else console.warn("Elemento no encontrado: back-btn");
+        if (forwardBtn) forwardBtn.addEventListener('click', () => ws.goForward()); else console.warn("Elemento no encontrado: forward-btn");
+        if (reloadBtn) reloadBtn.addEventListener('click', () => ws.reload()); else console.warn("Elemento no encontrado: reload-btn");
+        if (captureBtn) captureBtn.addEventListener('click', () => ws.captureDataLayer()); else console.warn("Elemento no encontrado: capture-btn");
+
+        if (modalBackBtn) modalBackBtn.addEventListener('click', () => ws.goBack()); else console.warn("Elemento no encontrado: modal-back-btn");
+        if (modalForwardBtn) modalForwardBtn.addEventListener('click', () => ws.goForward()); else console.warn("Elemento no encontrado: modal-forward-btn");
+        if (modalReloadBtn) modalReloadBtn.addEventListener('click', () => ws.reload()); else console.warn("Elemento no encontrado: modal-reload-btn");
+        if (modalCaptureBtn) modalCaptureBtn.addEventListener('click', () => ws.captureDataLayer()); else console.warn("Elemento no encontrado: modal-capture-btn");
+
+        if (gotoBtn && gotoUrlInput) {
+            gotoBtn.addEventListener('click', () => ws.goToUrl(gotoUrlInput.value));
+            gotoUrlInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') ws.goToUrl(gotoUrlInput.value);
+            });
+        } else {
+            console.warn("Elementos no encontrados: goto-btn o goto-url");
+        }
+
+        if (captureDatalayerBtn) captureDatalayerBtn.addEventListener('click', () => ws.captureDataLayer()); else console.warn("Elemento no encontrado: capture-datalayer-btn");
+        if (checkValidationBtn) checkValidationBtn.addEventListener('click', () => ws.checkValidation()); else console.warn("Elemento no encontrado: check-validation-btn");
+        if (takeScreenshotBtn) takeScreenshotBtn.addEventListener('click', () => ws.takeScreenshot()); else console.warn("Elemento no encontrado: take-screenshot-btn");
+
+        // Botones que ABREN modales
+        if (fullscreenBtn && fullscreenModal) fullscreenBtn.addEventListener('click', () => fullscreenModal.show()); else console.warn("Elementos no encontrados: fullscreen-btn o su modal");
+        if (stopBtnTrigger && stopSessionModal) stopBtnTrigger.addEventListener('click', () => stopSessionModal.show()); else console.warn("Elementos no encontrados: stop-btn o su modal");
+        if (generateReportBtnTrigger && generateReportModal) generateReportBtnTrigger.addEventListener('click', () => generateReportModal.show()); else console.warn("Elementos no encontrados: generate-report-btn o su modal");
+
+        // Botones DENTRO de los modales
+        if (confirmStopBtn && stopSessionModal) {
+            confirmStopBtn.addEventListener('click', () => {
+                ws.stopSession();
+                stopSessionModal.hide(); // Ocultar modal después de confirmar
+            });
+        } else {
+             console.warn("Elementos no encontrados: confirm-stop-btn o su modal");
+        }
+
+        if (confirmGenerateReportBtn && generateReportModal) {
+            confirmGenerateReportBtn.addEventListener('click', () => {
+                const reportTitleInput = document.getElementById('report-title');
+                const reportFormatSelect = document.getElementById('report-format');
+                const includeScreenshotsCheck = document.getElementById('include-screenshots');
+                const includeRawDataCheck = document.getElementById('include-raw-data');
+
+                // Validar que los elementos del formulario existen antes de usarlos
+                if (!reportTitleInput || !reportFormatSelect || !includeScreenshotsCheck || !includeRawDataCheck) {
+                    console.error("Faltan elementos en el formulario de reporte.");
+                    return;
+                }
+
+                ws.generateReport({
+                    title: reportTitleInput.value,
+                    format: reportFormatSelect.value,
+                    include_screenshots: includeScreenshotsCheck.checked,
+                    include_raw_data: includeRawDataCheck.checked
+                 });
+                generateReportModal.hide(); // Ocultar modal
+            });
+        } else {
+             console.warn("Elementos no encontrados: confirm-generate-report-btn o su modal");
+        }
+
+        // Clics en las imágenes
+         if (screenshotImg) {
+            screenshotImg.addEventListener('click', (event) => {
+                const rect = event.target.getBoundingClientRect();
+                // Verifica que el ancho y alto no sean 0 para evitar división por cero
+                if (rect.width > 0 && rect.height > 0) {
+                    const xPercent = (event.clientX - rect.left) / rect.width;
+                    const yPercent = (event.clientY - rect.top) / rect.height;
+                    // Asegurarse que los porcentajes estén entre 0 y 1
+                    const clampedX = Math.max(0, Math.min(1, xPercent));
+                    const clampedY = Math.max(0, Math.min(1, yPercent));
+                    console.log(`Click en imagen principal: X%=${clampedX.toFixed(3)}, Y%=${clampedY.toFixed(3)}`);
+                    ws.clickAt(clampedX, clampedY);
+                } else {
+                    console.warn("Dimensiones de imagen no válidas para calcular clic:", rect);
+                }
+            });
+        } else {
+             console.warn("Elemento no encontrado: browser-screenshot");
+        }
+
+        if (modalScreenshotImg) {
+            modalScreenshotImg.addEventListener('click', (event) => {
+                const rect = event.target.getBoundingClientRect();
+                 if (rect.width > 0 && rect.height > 0) {
+                    const xPercent = (event.clientX - rect.left) / rect.width;
+                    const yPercent = (event.clientY - rect.top) / rect.height;
+                    const clampedX = Math.max(0, Math.min(1, xPercent));
+                    const clampedY = Math.max(0, Math.min(1, yPercent));
+                     console.log(`Click en imagen modal: X%=${clampedX.toFixed(3)}, Y%=${clampedY.toFixed(3)}`);
+                    ws.clickAt(clampedX, clampedY);
+                } else {
+                     console.warn("Dimensiones de imagen modal no válidas para calcular clic:", rect);
+                 }
+            });
+        } else {
+            console.warn("Elemento no encontrado: modal-browser-screenshot");
+        }
+
+        // Guardar referencia global para depuración (opcional)
+        window.sessionWs = ws;
+
+    });
+</script>
+{% endblock %}
+{# --- Fin del Bloque JavaScript Modificado --- #}

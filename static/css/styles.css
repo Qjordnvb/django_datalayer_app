@@ -1,0 +1,212 @@
+/* Estilos generales */
+html, body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+/* Estilos de la barra de navegación */
+.navbar-brand i {
+    margin-right: 0.5rem;
+    color: #17a2b8;
+}
+
+/* Estilos de las tarjetas */
+.card {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    font-weight: 500;
+}
+
+/* Formularios */
+.form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(23, 162, 184, 0.25);
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+/* Botones */
+.btn-primary {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: #138496;
+    border-color: #117a8b;
+}
+
+.btn-outline-primary {
+    color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+.btn-outline-primary:hover {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+/* Tabla de sesiones recientes */
+.table-hover tbody tr:hover {
+    background-color: rgba(23, 162, 184, 0.05);
+}
+
+/* Estilos para la página de sesión */
+.browser-container {
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    background-color: #f8f9fa;
+}
+
+.browser-header {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: #e9ecef;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.browser-address-bar {
+    flex: 1;
+    margin: 0 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.browser-controls button {
+    margin-left: 0.25rem;
+}
+
+.browser-viewport {
+    position: relative;
+    height: 600px;
+    background-color: #fff;
+    overflow: hidden;
+}
+
+.browser-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 10;
+}
+
+.browser-screenshot {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Panel de DataLayers */
+.datalayer-panel {
+    height: 600px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+}
+
+.datalayer-event {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    border-left: 4px solid #17a2b8;
+}
+
+.datalayer-event.valid {
+    border-left-color: #28a745;
+}
+
+.datalayer-event.invalid {
+    border-left-color: #dc3545;
+}
+
+.datalayer-event.warning {
+    border-left-color: #ffc107;
+}
+
+.json-viewer {
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    font-family: monospace;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Página de reportes */
+.report-card {
+    height: 100%;
+}
+
+.report-card .card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.report-summary {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.report-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+/* Animaciones y efectos */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .browser-viewport {
+        height: 400px;
+    }
+
+    .datalayer-panel {
+        height: 400px;
+        margin-top: 1rem;
+    }
+}

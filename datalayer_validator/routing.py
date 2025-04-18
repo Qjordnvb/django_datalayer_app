@@ -1,7 +1,17 @@
-# datalayer_validator/routing.py
-from django.urls import re_path
-from core.consumers import BrowserConsumer
+from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.security.websocket import AllowedHostsOriginValidator
 
-websocket_urlpatterns = [
-    re_path(r"ws/browser/(?P<session_id>[^/]+)/$", BrowserConsumer.as_asgi()),
-]
+import core.routing
+
+application = ProtocolTypeRouter({
+# HTTP -> Django views is added by default
+'websocket': AllowedHostsOriginValidator(
+AuthMiddlewareStack(
+URLRouter(
+core.routing.websocket_urlpatterns
+)
+)
+),
+})
+

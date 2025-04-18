@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %} {# Asegúrate que esto está presente y al principio #}
+
+{% block title %}Inicio - DataLayer Validator{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10"> {# Ajustado el ancho para mejor layout #}
+        <div class="card shadow mb-4"> {# Añadido mb-4 #}
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-rocket me-2"></i>Iniciar nueva validación</h4>
+            </div>
+            <div class="card-body">
+                <p class="lead mb-4">
+                    Valida implementaciones de DataLayers en sitios web comparándolas con un archivo JSON de referencia mientras navegas por el sitio.
+                </p>
+
+                <form method="post" enctype="multipart/form-data" id="validation-form" novalidate> {# Añadido novalidate para ver errores del backend #}
+                    {% csrf_token %}
+
+                    {# Mostrar errores generales del formulario #}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {% for error in form.non_field_errors %}
+                                <p class="mb-0">{{ error }}</p>
+                            {% endfor %}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endif %}
+                    {% if form.errors and not form.non_field_errors %}
+                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <p class="mb-1"><strong>Por favor corrige los errores indicados en el formulario.</strong></p>
+                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                         </div>
+                    {% endif %}
+
+                    {# Renderizar campos con Crispy Forms #}
+                    {{ form.url|as_crispy_field }}
+                    {{ form.json_file|as_crispy_field }}
+
+                    {# Renderizar browser_type si existe en el form #}
+                    {% if form.browser_type %}
+                     <div class="row mt-1"> {# Reducido margen si no hay headless #}
+                         <div class="col-md-12">
+                             {{ form.browser_type|as_crispy_field }}
+                         </div>
+                     </div>
+                    {% endif %}
+
+                    {# Renderizar headless si existe en el form (cambiado a filtro) #}
+                    {% if form.headless %}
+                    <div class="mb-3 mt-3">
+
+                         {{ form.headless|as_crispy_field }} {# Usar filtro en lugar de tag #}
+
+                    </div>
+                    {% endif %}
+
+                    {{ form.description|as_crispy_field }}
+
+                    <hr class="my-4">
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-play-circle me-2"></i>Iniciar validación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+         {# Sesiones Recientes #}
+         <div class="card mt-4 shadow">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0"><i class="fas fa-history me-2"></i>Sesiones recientes</h4>
+            </div>
+            <div class="card-body">
+                {% if recent_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>URL</th>
+                                    <th>Fecha</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in recent_sessions %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ session.url }}" target="_blank" title="{{ session.url }}" class="text-decoration-none">
+                                            {{ session.url|truncatechars:40 }}
+                                        </a><br>
+                                        <small class="text-muted">{{ session.description|default:""|truncatechars:50 }}</small>
+                                    </td>
+                                    <td>{{ session.created_at|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        {% if session.status == 'active' %}
+                                            <span class="badge bg-success">Activa</span>
+                                        {% elif session.status == 'completed' %}
+                                            <span class="badge bg-primary">Completada</span>
+                                        {% elif session.status == 'error' %}
+                                            <span class="badge bg-danger">Error</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ session.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'session' session.id %}" class="btn btn-outline-primary" title="Ver/Continuar Sesión">
+                                                <i class="fas fa-play"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                     {% url 'sessions_list' as sessions_list_url %}
+                     {% if sessions_list_url %}
+                         {% if recent_sessions.has_other_pages or recent_sessions|length >= 5 %}
+                             <div class="text-center mt-3">
+                                 <a href="{{ sessions_list_url }}" class="btn btn-sm btn-outline-secondary">Ver todas las sesiones</a>
+                             </div>
+                         {% endif %}
+                     {% endif %}
+                {% else %}
+                    <div class="alert alert-light text-center border">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No hay sesiones recientes. ¡Inicia una nueva validación!
+                    </div>
+                {% endif %}
+            </div>
+        </div>{# Fin card sesiones recientes #}
+    </div>{# Fin col-lg-8 #}
+</div>{# Fin row #}
+
+<div class="modal fade" id="jsonFormatModal" tabindex="-1" aria-labelledby="jsonFormatModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="jsonFormatModalLabel">Formato JSON de Referencia (Lista de Eventos)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                 <p>El archivo JSON de referencia debe ser una <strong>lista</strong> donde cada objeto representa un evento esperado:</p>
+                 <pre class="bg-light p-3 rounded"><code>[
+{
+  "event": "GAEvent",
+  "event_category": "...",
+  "event_action": "...",
+  "event_label": "...",
+  "interaction": "False", // Opcional
+  "component_name": "{{component_name}}", // Opcional
+  "element_text": "{{element_name}}", // Opcional
+  "user_type": null // Opcional
+},
+{
+  "event": "...",
+  // ... más propiedades ...
+}
+// ... más eventos ...
+]</code></pre>
+                 <p>Las claves requeridas por defecto (según la validación actual en <code>forms.py</code>) son: <code>event</code>, <code>event_category</code>, <code>event_action</code>, <code>event_label</code>.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{# No se necesita JS específico aquí si la validación del backend es suficiente #}
+{% endblock %}

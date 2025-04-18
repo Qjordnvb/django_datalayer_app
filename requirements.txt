@@ -8,6 +8,7 @@ whitenoise==6.6.0
 gunicorn==21.2.0
 redis==5.0.1
 psycopg2-binary==2.9.9
+channels-redis==4.2.0
 
 # Dependencias existentes
 playwright==1.40.0

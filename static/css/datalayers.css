@@ -1,0 +1,283 @@
+/**
+ * Estilos específicos para la visualización de DataLayers
+ */
+
+/* Panel de DataLayers */
+.datalayer-panel {
+    max-height: 600px;
+    overflow-y: auto;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+}
+
+/* Eventos de DataLayer */
+.datalayer-event {
+    margin: 0.75rem;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    background-color: #fff;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.datalayer-event:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Encabezado del evento */
+.datalayer-event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Estado de validación */
+.datalayer-event.valid {
+    border-left: 4px solid #28a745;
+}
+
+.datalayer-event.invalid {
+    border-left: 4px solid #dc3545;
+}
+
+.datalayer-event.warning {
+    border-left: 4px solid #ffc107;
+}
+
+/* Contenido del evento */
+.datalayer-event-content {
+    padding: 1rem;
+}
+
+/* Visor de JSON */
+.json-viewer {
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.875rem;
+    padding: 1rem;
+    overflow-x: auto;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.json-viewer pre {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+/* Colores para la sintaxis JSON */
+.json-key {
+    color: #d63384;
+}
+
+.json-string {
+    color: #198754;
+}
+
+.json-number {
+    color: #0d6efd;
+}
+
+.json-boolean {
+    color: #fd7e14;
+}
+
+.json-null {
+    color: #6c757d;
+}
+
+/* Lista de errores */
+.validation-errors {
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.validation-errors li {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background-color: #f8d7da;
+    border-radius: 0.25rem;
+    border-left: 3px solid #dc3545;
+}
+
+/* Información de validación */
+.validation-info {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+}
+
+/* Animaciones */
+@keyframes fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.datalayer-event {
+    animation: fadein 0.3s ease-in-out;
+}
+
+/* Indicador de carga */
+.datalayer-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+.datalayer-loading i {
+    margin-right: 0.5rem;
+}
+
+/* Placeholder cuando no hay datos */
+.datalayer-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: #6c757d;
+}
+
+.datalayer-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Botones de acción dentro del panel */
+.datalayer-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Metadatos del evento */
+.event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
+
+.event-meta-item {
+    display: flex;
+    align-items: center;
+}
+
+.event-meta-item i {
+    margin-right: 0.25rem;
+}
+
+/* Estilos para dispositivos móviles */
+@media (max-width: 768px) {
+    .datalayer-panel {
+        max-height: 400px;
+    }
+
+    .json-viewer {
+        max-height: 150px;
+    }
+
+    .datalayer-event-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .event-meta {
+        margin-top: 0.75rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+/* Tooltips para información adicional */
+.datalayer-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.datalayer-tooltip .tooltip-content {
+    visibility: hidden;
+    width: 200px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.datalayer-tooltip:hover .tooltip-content {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Botones de copiado para el JSON */
+.copy-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+    background-color: #e9ecef;
+}
+
+.json-viewer-container {
+    position: relative;
+}
+
+/* Estilos para resaltar la búsqueda */
+.highlight-search {
+    background-color: yellow;
+    padding: 0.1rem 0.2rem;
+    border-radius: 0.2rem;
+}
+
+/* Estilos para filtros activos */
+.filter-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #fff;
+    background-color: #6c757d;
+    border-radius: 0.25rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.filter-badge .close-icon {
+    margin-left: 0.5rem;
+    cursor: pointer;
+}

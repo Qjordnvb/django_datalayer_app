@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Aplicación principal
+  web:
+    build: .
+    # ---- INICIO CAMBIO ----
+    # Cambiado a Daphne para manejar ASGI/WebSockets correctamente
+
+    command: bash -c "Xvfb :99 -screen 0 1980x1020x24 -ac & export DISPLAY=:99 && daphne -b 0.0.0.0 -p 8000 datalayer_validator.asgi:application"
+
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env # Asegúrate que este archivo defina REDIS_HOST si lo usas abajo
+    environment:
+      - DJANGO_SETTINGS_MODULE=datalayer_validator.settings
+      # Asegúrate que el host de Redis sea el nombre del servicio ('redis' por defecto aquí)
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      # Variables para crear superusuario (opcional, desde entrypoint.sh)
+      # - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
+      # - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
+      # - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL}
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Base de datos (comentada, usando SQLite por defecto)
+  # db: ...
+
+
+  # Servidor Redis para Channels
+  redis:
+    image: redis:7 # Usar una versión reciente de Redis
+    ports:
+      - "6379:6379" # Exponer puerto si necesitas acceso externo (normalmente no)
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data # Persistir datos de Redis
+
+
+
+volumes:
+  # postgres_data: # Descomentar si usas PostgreSQL
+  redis_data:
+  static_volume:
+  media_volume:
+  logs_volume:
